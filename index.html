@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Word Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Prism.js for code highlighting -->
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script>
+      Prism.plugins.autoloader.languages_path = 'https://cdn.jsdelivr.net/npm/prismjs@1/components/';
+    </script>
+
+    <style>
+      .editor-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        outline: none;
+      }
+      .page {
+        width: 21cm;
+        height: 29.7cm;
+        padding: 20px;
+        border: 1px solid #555;
+        background: #1f1f1f;
+        color: #f5f5f5;
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.05);
+        overflow: hidden;
+        page-break-after: always;
+      }
+      pre {
+        background-color: #2d2d2d;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-white min-h-screen">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed top-0 left-0 w-64 bg-gray-800 h-screen p-4 flex flex-col gap-4 shadow-lg transition-all duration-300 z-40">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-semibold">📄 Tools</h2>
+        <button onclick="toggleSidebar()" class="text-white text-xl"><i class="ph ph-list"></i></button>
+      </div>
+      <button class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" onclick="saveText()">
+        <i class="ph ph-floppy-disk"></i> Save as TXT
+      </button>
+      <button class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded" onclick="exportPDF()">
+        <i class="ph ph-file-pdf"></i> Export PDF
+      </button>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <i class="ph ph-palette"></i>
+        <input type="color" id="textColor" class="h-8 w-8 rounded-full border border-gray-600" onchange="changeTextColor()" title="Choose text color" />
+      </label>
+      <label for="imageInput" class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer">
+        <i class="ph ph-image"></i>
+        <span>Upload Image</span>
+      </label>
+      <input type="file" id="imageInput" class="hidden" accept="image/*" onchange="insertImage(event)" />
+      <button class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded" onclick="insertTable()">
+        <i class="ph ph-table"></i> Insert Table
+      </button>
+      <button class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded" onclick="openTextFile()">
+        <i class="ph ph-folder-open"></i> Open .txt
+      </button>
+    </div>
+
+    <!-- Sidebar Toggle Button (when sidebar is hidden) -->
+    <button id="openSidebar" onclick="toggleSidebar()" class="fixed top-4 left-4 z-50 bg-gray-700 text-white p-2 rounded hidden">
+      <i class="ph ph-list"></i>
+    </button>
+
+    <!-- Top Navigation Bar -->
+    <div id="topnav" class="fixed left-64 top-0 right-0 bg-gray-800 text-white shadow-md z-30 transition-all duration-300">
+      <div class="flex flex-wrap justify-center gap-3 p-3">
+        <select id="languageSelector" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white">
+          <option value="javascript" selected>JavaScript</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="python">Python</option>
+          <option value="java">Java</option>
+          <option value="c">C</option>
+          <option value="cpp">C++</option>
+          <option value="php">PHP</option>
+          <option value="bash">Bash</option>
+        </select>
+        <button class="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded flex items-center gap-1" onclick="insertCodeBlock()">
+          <i class="ph ph-code"></i> Code Block
+        </button>
+        <select id="fontSelector" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white" onchange="changeFont()">
+          <option value="Arial" selected>Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Georgia">Georgia</option>
+        </select>
+        <select id="fontSizeSelector" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white" onchange="changeFontSize()">
+          <option value="12px" selected>12px</option>
+          <option value="14px">14px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+          <option value="24px">24px</option>
+          <option value="28px">28px</option>
+        </select>
+        <div class="flex gap-1">
+          <button class="bg-blue-500 text-white px-2 py-1 rounded" onclick="insertOrderedList()">
+            <i class="ph ph-list-numbers"></i>
+          </button>
+          <button class="bg-blue-500 text-white px-2 py-1 rounded" onclick="insertUnorderedList()">
+            <i class="ph ph-list-bullets"></i>
+          </button>
+        </div>
+        <div class="flex gap-1">
+          <button class="bg-gray-600 text-white px-2 py-1 rounded" onclick="alignText('left')">
+            <i class="ph ph-text-align-left"></i>
+          </button>
+          <button class="bg-gray-600 text-white px-2 py-1 rounded" onclick="alignText('center')">
+            <i class="ph ph-text-align-center"></i>
+          </button>
+          <button class="bg-gray-600 text-white px-2 py-1 rounded" onclick="alignText('right')">
+            <i class="ph ph-text-align-right"></i>
+          </button>
+          <button class="bg-gray-600 text-white px-2 py-1 rounded" onclick="alignText('justify')">
+            <i class="ph ph-text-align-justify"></i>
+          </button>
+        </div>
+        <div class="flex gap-1">
+          <button class="bg-black text-white px-2 py-1 rounded font-bold" onclick="toggleBold()">B</button>
+          <button class="bg-black text-white px-2 py-1 rounded italic" onclick="toggleItalic()">I</button>
+          <button class="bg-black text-white px-2 py-1 rounded underline" onclick="toggleUnderline()">U</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 pt-28 px-6 overflow-y-auto">
+      <div class="editor-container" id="editorContainer">
+        <div class="page" contenteditable="true"></div>
+      </div>
+    </div>
+
+    <script>
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const topnav = document.getElementById("topnav");
+        const toggleBtn = document.getElementById("openSidebar");
+
+        sidebar.classList.toggle("hidden");
+        toggleBtn.classList.toggle("hidden");
+
+        if (sidebar.classList.contains("hidden")) {
+          topnav.classList.replace("left-64", "left-0");
+          document.querySelector(".ml-64").classList.replace("ml-64", "ml-0");
+        } else {
+          topnav.classList.replace("left-0", "left-64");
+          document.querySelector(".ml-0").classList.replace("ml-0", "ml-64");
+        }
+      }
+
+      // Prevent deleting the only page
+      document.getElementById("editorContainer").addEventListener("keydown", function (e) {
+        const pages = document.querySelectorAll(".page");
+        if (e.key === "Backspace" && pages.length === 1 && pages[0].innerText.trim() === "") {
+          e.preventDefault();
+        }
+      });
+
+      // Auto-remove empty pages except first on any input
+      document.getElementById("editorContainer").addEventListener("input", function () {
+        const pages = document.querySelectorAll(".page");
+        pages.forEach((page, index) => {
+          const isEmpty = page.innerText.trim().length === 0 && !page.querySelector("img, table, pre, code");
+          if (isEmpty && index !== 0) {
+            page.remove();
+          }
+        });
+      });
+    </script>
+    <script src="main.js"></script>
+  </body>
+</html>
